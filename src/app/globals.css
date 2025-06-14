@@ -24,3 +24,177 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Syntax highlighting styles */
+.hljs {
+  @apply bg-gray-900 text-gray-100;
+}
+
+.hljs-comment,
+.hljs-quote {
+  @apply text-gray-400 italic;
+}
+
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+  @apply text-red-400;
+}
+
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+  @apply text-orange-400;
+}
+
+.hljs-attribute {
+  @apply text-yellow-400;
+}
+
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+  @apply text-green-400;
+}
+
+.hljs-title,
+.hljs-section {
+  @apply text-blue-400;
+}
+
+.hljs-keyword,
+.hljs-selector-tag {
+  @apply text-purple-400;
+}
+
+.hljs-emphasis {
+  @apply italic;
+}
+
+.hljs-strong {
+  @apply font-bold;
+}
+
+/* Custom prose styles for better readability */
+.prose {
+  @apply text-gray-700 leading-relaxed;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  @apply text-gray-900 font-bold;
+}
+
+.prose h1 {
+  @apply text-3xl mb-6 mt-8;
+}
+
+.prose h2 {
+  @apply text-2xl mb-4 mt-6;
+}
+
+.prose h3 {
+  @apply text-xl mb-4 mt-6;
+}
+
+.prose p {
+  @apply mb-4;
+}
+
+.prose ul,
+.prose ol {
+  @apply mb-4 space-y-2;
+}
+
+.prose li {
+  @apply leading-relaxed;
+}
+
+.prose code {
+  @apply bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-sm font-mono;
+}
+
+.prose pre {
+  @apply bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm mb-6;
+}
+
+.prose pre code {
+  @apply bg-transparent text-inherit p-0;
+}
+
+.prose blockquote {
+  @apply border-l-4 border-blue-500 pl-4 italic text-gray-600 mb-4;
+}
+
+.prose a {
+  @apply text-blue-600 hover:text-blue-800 underline;
+}
+
+.prose strong {
+  @apply font-semibold text-gray-900;
+}
+
+.prose em {
+  @apply italic;
+}
+
+/* Table styles */
+.prose table {
+  @apply w-full border-collapse border border-gray-300 mb-6;
+}
+
+.prose th,
+.prose td {
+  @apply border border-gray-300 px-4 py-2 text-left;
+}
+
+.prose th {
+  @apply bg-gray-50 font-semibold;
+}
+
+/* Code block title styles */
+.code-title {
+  @apply bg-gray-800 text-gray-200 px-4 py-2 text-sm font-mono rounded-t-lg border-b border-gray-600;
+}
+
+.code-title + pre {
+  @apply rounded-t-none;
+}
+
+/* Focus styles for accessibility */
+a:focus,
+button:focus {
+  @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+}
+
+/* Custom scrollbar for code blocks */
+pre::-webkit-scrollbar {
+  height: 8px;
+}
+
+pre::-webkit-scrollbar-track {
+  @apply bg-gray-800;
+}
+
+pre::-webkit-scrollbar-thumb {
+  @apply bg-gray-600 rounded;
+}
+
+pre::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-500;
+}

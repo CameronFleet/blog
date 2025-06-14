@@ -1,0 +1,137 @@
+---
+title: "Building a Modern Blog with Next.js and MDX"
+date: "2024-01-15"
+excerpt: "A deep dive into creating a fast, modern blog using Next.js, MDX, and Tailwind CSS. Learn how to set up a developer-friendly blogging platform that's both performant and easy to maintain."
+tags: ["Next.js", "MDX", "React", "Tailwind CSS", "Web Development"]
+category: "tutorial"
+---
+
+# Building a Modern Blog with Next.js and MDX
+
+When I decided to rebuild my blog, I wanted something that would be fast, developer-friendly, and easy to maintain. After exploring various options, I settled on a combination of **Next.js**, **MDX**, and **Tailwind CSS**. Here's why this stack works so well and how you can build something similar.
+
+## Why This Stack?
+
+### Next.js for Performance
+Next.js gives us incredible performance out of the box with:
+- Static Site Generation (SSG) for blazing fast load times
+- Built-in image optimization
+- Automatic code splitting
+- SEO-friendly routing
+
+### MDX for Content
+MDX combines the simplicity of Markdown with the power of React components:
+
+```jsx
+// You can use React components directly in your posts!
+<CustomComponent data={someData} />
+
+// Or embed interactive examples
+<InteractiveDemo />
+```
+
+### Tailwind CSS for Styling
+Tailwind provides:
+- Consistent design system
+- Responsive design utilities
+- No CSS conflicts
+- Excellent developer experience
+
+## Setting Up the Project
+
+Let's start with a fresh Next.js project:
+
+```bash
+npx create-next-app@latest my-blog --typescript --tailwind --app
+cd my-blog
+```
+
+Then add the MDX dependencies:
+
+```bash
+npm install @next/mdx @mdx-js/loader @mdx-js/react
+npm install remark-gfm rehype-highlight
+```
+
+## Creating the Blog Structure
+
+The key to a maintainable blog is good organization:
+
+```
+src/
+├── app/
+│   ├── page.tsx          # Homepage
+│   ├── posts/
+│   │   └── [slug]/
+│   │       └── page.tsx  # Individual post pages
+│   └── about/
+│       └── page.tsx      # About page
+├── components/
+│   └── blog/
+│       ├── Header.tsx
+│       ├── Footer.tsx
+│       └── PostCard.tsx
+├── lib/
+│   └── posts.ts          # Post utilities
+└── posts/
+    └── *.mdx             # Your blog posts
+```
+
+## The Power of MDX Components
+
+One of the best features of MDX is the ability to create custom components for your posts:
+
+```tsx
+const components = {
+  h1: ({ children }) => (
+    <h1 className="text-3xl font-bold mb-6">{children}</h1>
+  ),
+  code: ({ children }) => (
+    <code className="bg-gray-100 px-2 py-1 rounded">
+      {children}
+    </code>
+  ),
+  // Add interactive components
+  Demo: ({ title }) => (
+    <div className="border p-4 rounded-lg">
+      <h3>{title}</h3>
+      <button onClick={() => alert('Hello!')}>
+        Click me!
+      </button>
+    </div>
+  )
+}
+```
+
+## Performance Considerations
+
+Here are some key optimizations I implemented:
+
+1. **Static Generation**: All posts are pre-rendered at build time
+2. **Image Optimization**: Using Next.js Image component
+3. **Bundle Splitting**: Components are only loaded when needed
+4. **SEO Optimization**: Proper meta tags and structured data
+
+## What's Next?
+
+Some features I'm planning to add:
+
+- [ ] Search functionality
+- [ ] Comment system
+- [ ] Newsletter integration
+- [ ] Dark mode support
+- [ ] Analytics dashboard
+
+## Conclusion
+
+This setup gives you a blog that's:
+- **Fast**: Static generation means instant page loads
+- **Flexible**: MDX components let you create rich content
+- **Maintainable**: TypeScript and good structure prevent bugs
+- **Scalable**: Can handle hundreds of posts without performance issues
+
+The developer experience is fantastic, and the end result is a blog that both you and your readers will love.
+
+---
+
+*What do you think? Are you planning to build a blog with Next.js and MDX? Let me know what features you'd like to see covered in future posts!* 

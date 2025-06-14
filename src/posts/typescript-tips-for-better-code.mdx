@@ -1,0 +1,196 @@
+---
+title: "5 TypeScript Tips for Better Code Quality"
+date: "2024-01-10"
+excerpt: "Practical TypeScript techniques that will make your code more robust, maintainable, and self-documenting. From utility types to advanced patterns."
+tags: ["TypeScript", "JavaScript", "Code Quality", "Best Practices"]
+category: "tips"
+---
+
+# 5 TypeScript Tips for Better Code Quality
+
+TypeScript has become an essential tool in modern web development, but there's often a gap between basic usage and truly leveraging its power. Here are five practical tips that will level up your TypeScript game.
+
+## 1. Use Utility Types for Better Type Manipulation
+
+TypeScript's built-in utility types are incredibly powerful but often underused:
+
+```typescript
+interface User {
+  id: string
+  name: string
+  email: string
+  isActive: boolean
+}
+
+// Create a type for updating users (all fields optional)
+type UserUpdate = Partial<User>
+
+// Create a type for creating users (without id)
+type UserCreate = Omit<User, 'id'>
+
+// Create a type with only specific fields
+type UserSummary = Pick<User, 'name' | 'email'>
+```
+
+**Why this matters**: Utility types help you derive new types from existing ones, reducing duplication and keeping your types DRY.
+
+## 2. Leverage Template Literal Types
+
+Template literal types allow you to create sophisticated string patterns:
+
+```typescript
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
+type ApiPath = '/users' | '/posts' | '/comments'
+
+// Combine them to create valid API endpoints
+type ApiEndpoint = `${HttpMethod} ${ApiPath}`
+// Result: "GET /users" | "POST /users" | "PUT /users" | ...
+
+// Real-world example: CSS classes
+type Size = 'sm' | 'md' | 'lg'
+type Spacing = 'tight' | 'normal' | 'loose'
+type ClassName = `spacing-${Spacing}` | `size-${Size}`
+```
+
+**Pro tip**: Template literals work great for creating type-safe APIs and reducing magic strings.
+
+## 3. Use `satisfies` for Better Type Inference
+
+The `satisfies` operator (TypeScript 4.9+) helps you get better type inference while still ensuring type safety:
+
+```typescript
+const config = {
+  apiUrl: 'https://api.example.com',
+  timeout: 5000,
+  retries: 3,
+  features: {
+    auth: true,
+    analytics: false
+  }
+} satisfies {
+  apiUrl: string
+  timeout: number
+  retries: number
+  features: Record<string, boolean>
+}
+
+// TypeScript knows the exact values!
+config.apiUrl.startsWith('https') // ✅ TypeScript knows this is string
+config.features.auth // ✅ TypeScript knows this is boolean
+```
+
+**Without `satisfies`**: You'd lose specific type information or need type assertions.
+
+## 4. Create Smart Default Parameters with Conditional Types
+
+Conditional types can make your function signatures much more user-friendly:
+
+```typescript
+interface ApiOptions {
+  format?: 'json' | 'xml'
+  cache?: boolean
+}
+
+type SmartDefaults<T> = T & {
+  format: T extends { format: infer F } ? F : 'json'
+  cache: T extends { cache: infer C } ? C : true
+}
+
+function fetchData<T extends ApiOptions>(
+  url: string, 
+  options: T = {} as T
+): Promise<SmartDefaults<T>> {
+  const defaults = {
+    format: 'json' as const,
+    cache: true
+  }
+  
+  return fetch(url, { ...defaults, ...options })
+    .then(res => res.json())
+}
+
+// Usage - TypeScript knows the exact return type!
+const result = await fetchData('/api/users') 
+// result.format is 'json', result.cache is true
+```
+
+## 5. Use Branded Types for Type Safety
+
+Sometimes you need to distinguish between values that have the same underlying type:
+
+```typescript
+// Branded types prevent mixing up similar values
+type UserId = string & { readonly brand: unique symbol }
+type PostId = string & { readonly brand: unique symbol }
+
+function createUserId(id: string): UserId {
+  return id as UserId
+}
+
+function createPostId(id: string): PostId {
+  return id as PostId
+}
+
+function getUser(id: UserId): Promise<User> {
+  // Implementation
+  return Promise.resolve({} as User)
+}
+
+// This prevents bugs!
+const userId = createUserId('user-123')
+const postId = createPostId('post-456')
+
+getUser(userId) // ✅ Works
+getUser(postId) // ❌ TypeScript error - can't use PostId as UserId
+```
+
+**Real-world applications**: Email addresses, URLs, database IDs, currency amounts.
+
+## Bonus: Advanced Error Handling
+
+Here's a pattern I use for better error handling with TypeScript:
+
+```typescript
+type Result<T, E = Error> = 
+  | { success: true; data: T }
+  | { success: false; error: E }
+
+async function safeApiCall<T>(
+  apiCall: () => Promise<T>
+): Promise<Result<T>> {
+  try {
+    const data = await apiCall()
+    return { success: true, data }
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error : new Error('Unknown error')
+    }
+  }
+}
+
+// Usage
+const result = await safeApiCall(() => fetchUserData())
+
+if (result.success) {
+  // TypeScript knows result.data exists and is the right type
+  console.log(result.data.name)
+} else {
+  // TypeScript knows result.error exists
+  console.error(result.error.message)
+}
+```
+
+## Wrapping Up
+
+These patterns might seem complex at first, but they pay dividends in:
+- **Fewer runtime errors**
+- **Better IDE support**
+- **Self-documenting code**
+- **Easier refactoring**
+
+The key is to start small - pick one technique and gradually incorporate it into your codebase. Your future self (and your teammates) will thank you!
+
+---
+
+*Which TypeScript feature do you find most helpful? I'd love to hear about your favorite patterns and tips!* 
