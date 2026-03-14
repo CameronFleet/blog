@@ -1,12 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -14,8 +9,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cameron Fleet - Software Engineer & Blog",
-  description: "Personal blog of Cameron Fleet, a software engineer sharing insights on technology, development, and engineering best practices.",
+  title: "Cameron Fleet",
+  description: "Staff engineer at Paxos. Writing about blockchain, distributed systems, and software engineering.",
 };
 
 export default function RootLayout({
@@ -25,9 +20,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <head>
+        <link
+          href="https://api.fontshare.com/v2/css?f[]=comico@400&f[]=zodiak@400,700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className={`${geistMono.variable} antialiased`}>
         {children}
         <Analytics />
       </body>

@@ -2,40 +2,30 @@ import Link from 'next/link'
 
 export default function Header() {
   return (
-    <header className="border-b border-gray-200 bg-white">
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <Link href="/" className="text-2xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
-              Cameron Fleet
-            </Link>
-            <p className="text-gray-600 text-sm mt-1">
-              Software Engineer • Builder • Learner
-            </p>
-          </div>
-          
-          <nav className="flex items-center space-x-6">
-            <Link 
-              href="/" 
-              className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
-            >
-              Blog
-            </Link>
-            <Link 
-              href="/about" 
-              className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
-            >
-              About
-            </Link>
-            <Link 
-              href="/tags" 
-              className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
-            >
-              Tags
-            </Link>
-          </nav>
-        </div>
+    <header className="border-b border-neutral-200 dark:border-neutral-800">
+      <div className="max-w-3xl mx-auto px-6 py-5 flex items-baseline justify-between">
+        <Link
+          href="/"
+          className="font-heading text-sm font-bold uppercase tracking-widest text-neutral-950 dark:text-neutral-50 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
+        >
+          Cameron Fleet
+        </Link>
+
+        <nav className="flex items-baseline gap-8">
+          <Link
+            href="/"
+            className="text-xs font-heading font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 hover:text-neutral-950 dark:hover:text-neutral-50 transition-colors"
+          >
+            Writing
+          </Link>
+          <Link
+            href="/about"
+            className="text-xs font-heading font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 hover:text-neutral-950 dark:hover:text-neutral-50 transition-colors"
+          >
+            About
+          </Link>
+        </nav>
       </div>
     </header>
   )
-} 
+}

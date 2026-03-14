@@ -1,0 +1,183 @@
+---
+title: "Should Claude.md Changes Be Tested?"
+date: "2026-03-14"
+excerpt: "Developers treat CLAUDE.md like config, but ship it like a comment. A single bad change can silently degrade every agent in your org. Here's why that's a problem, and what to do about it."
+tags:
+  - AI
+  - Claude
+  - Testing
+  - Developer Experience
+category: blog
+---
+
+# Should Claude.md Changes Be Tested?
+
+There's a class of change that scares me more than most production deployments: a change to `CLAUDE.md`.
+
+I've watched a well-intentioned developer add a single sentence to our shared `CLAUDE.md` — clarifying how to handle a specific edge case — and silently break the behavior dozens of other developers relied on every day. No tests caught it. No CI pipeline flagged it. The first signal was someone asking why Claude was behaving differently.
+
+If a developer changed a shared config file that modified how a critical service behaved, you'd demand tests. But `CLAUDE.md`? We ship it like a comment.
+
+This post is my attempt to think through why that's a problem, what the broader ecosystem is doing about it, and what a reasonable CI/CD approach might actually look like.
+
+## What Is CLAUDE.md, Really?
+
+`CLAUDE.md` (and its cousin `AGENTS.md`) is a configuration file that shapes how an AI agent interprets and responds to every request. It's injected into the system prompt. It defines constraints, tone, tool behavior, and conventions. It's essentially runtime configuration for a probabilistic system.
+
+The difference from normal config is important: a broken config value in a service usually produces an immediate, deterministic error. A broken instruction in `CLAUDE.md` produces subtly wrong behavior that varies by prompt, context, and model temperature. There's no stack trace. There's no `500`. There's just... drift.
+
+Anthropic describes CLAUDE.md as something you check into version control alongside your code. The [AGENTS.md community spec](https://agents.md/) formalizes this further, treating these files as first-class project artifacts. GitHub's own analysis of over 2,500 repositories found these files are updated roughly every 22 hours — which means they're changing constantly, in small increments, by many different hands.
+
+That cadence sounds healthy. But without tests, it's a slow-moving accident.
+
+## The Current State: Hope and a Reference Prompt
+
+At my team, our informal process is: when someone wants to change `CLAUDE.md`, they run a set of reference prompts before and after the change and look at the outputs. Manual. Subjective. Skipped when people are busy.
+
+This is better than nothing, but it has obvious problems:
+
+- **Coverage is ad hoc.** The reference prompts reflect whatever the author happened to think of, not a systematic representation of how Claude is actually used.
+- **Comparison is subjective.** Two engineers looking at the same before/after outputs will often disagree about whether the change is an improvement or a regression.
+- **Process is opt-in.** In practice, small "obvious" changes skip the process entirely.
+- **Nondeterminism obscures signal.** Even identical inputs can produce different outputs. How do you know if a difference is from your change or just natural variation?
+
+The challenge is that these problems aren't unique to `CLAUDE.md`. They're the general problem of prompt regression testing — a field that has been moving fast.
+
+## What the Ecosystem Has Built
+
+The good news is that the broader problem of "test your LLM configuration changes" is well-understood and there's real tooling for it. The gap is that nothing is purpose-built specifically for `CLAUDE.md` diffs — but the pieces are there.
+
+### Promptfoo
+
+[Promptfoo](https://github.com/promptfoo/promptfoo) is the most complete open-source solution. You write YAML test configs that define your system prompt (which can include your `CLAUDE.md` content), a set of test inputs, and assertions over the outputs. Assertions can be deterministic (does the output contain this string? Is it valid JSON?) or semantic (does an LLM-as-judge score this above 0.8?).
+
+It has a native [Claude Agent SDK provider](https://www.promptfoo.dev/docs/providers/claude-agent-sdk/), a [GitHub Action](https://github.com/promptfoo/promptfoo-action) that posts results as PR comments, and can fail the build on regressions. If I were building this from scratch, I'd start here.
+
+```yaml
+# promptfooconfig.yaml
+prompts:
+  - file://CLAUDE.md  # Your actual CLAUDE.md
+
+providers:
+  - id: anthropic:claude-sonnet-4-6
+
+tests:
+  - vars:
+      task: "Write a SQL migration to add a nullable column"
+    assert:
+      - type: llm-rubric
+        value: "Response includes a rollback strategy and does not use ALTER TABLE without a transaction"
+      - type: not-contains
+        value: "DROP TABLE"
+```
+
+### Agent CI
+
+[Agent CI](https://agent-ci.com) is newer and closer to what I actually want: a GitHub App that installs into your repo, auto-discovers agent configurations, and runs behavioral evals on every PR. It explicitly models variance across multiple runs — running the same eval several times and flagging inconsistency. That's the right instinct for nondeterministic systems.
+
+### DeepEval
+
+[DeepEval](https://deepeval.com) takes a pytest-first approach. You write LLM tests exactly like unit tests, with built-in metrics for hallucination, bias, relevancy, and more. If your team is already invested in pytest and wants to treat prompt changes with the same discipline as code changes, this is the natural fit.
+
+### The LLM-as-Judge Pattern
+
+All of these tools share a core approach for handling nondeterminism: use another LLM to evaluate the output. Instead of asserting that the output equals a specific string, you ask a judge model to evaluate the output against a rubric and return a score.
+
+The key practices for making this reliable:
+- Constrain the judge to binary or narrow outputs (pass/fail, 1–5) rather than open-ended assessments
+- Run the same evaluation 3–5 times and treat inconsistent judge results as a signal that your rubric is underspecified
+- Use a lower temperature for judge calls (0.2–0.3)
+- Build rubrics as explicit decision trees, not open-ended prompts
+
+Golden datasets — curated sets of inputs with expected *properties* (not exact outputs) — are the foundation. Research comparing golden datasets vs. random sampling generally concludes you need both: golden datasets for CI gates, random sampling for catching emergent failures in production.
+
+## What a Proper CI Pipeline Might Look Like
+
+Here's the architecture I'd reach for:
+
+```
+PR opens with CLAUDE.md change
+        │
+        ▼
+┌─────────────────────────────┐
+│   promptfoo-action runs     │
+│   eval suite in CI          │
+└──────────────┬──────────────┘
+               │
+       ┌───────┴────────┐
+       ▼                ▼
+  Deterministic    LLM-as-Judge
+  assertions       rubric scores
+  (format,         (behavior,
+  safety rules,    intent,
+  must-not-do)     quality)
+       │                │
+       └───────┬────────┘
+               ▼
+       Score vs. threshold
+               │
+       ┌───────┴────────┐
+       ▼                ▼
+    PASS              FAIL
+  merge allowed    PR blocked +
+                  results posted
+                  as PR comment
+```
+
+**The eval suite lives in version control alongside `CLAUDE.md`**. Changes to the file and changes to the tests travel together in the same PR. This is the critical discipline — treating the test suite as the specification of what `CLAUDE.md` is supposed to do.
+
+The suite should have two layers:
+
+1. **Hard assertions.** Things that should never happen regardless of context. Never suggest `DROP TABLE` without confirmation. Always include a rollback. Never expose API keys. These are deterministic and cheap to check.
+
+2. **Behavioral rubrics.** Evaluated by an LLM judge. "Does this response follow the team's convention for commit messages?" "Does this advice account for the blockchain-specific constraints we documented?" These are the hard ones, but they're also the important ones.
+
+## The Nondeterminism Problem Is Real But Manageable
+
+The most common objection to automating this is: how do you write reliable tests for a probabilistic system? If the same prompt can produce different outputs, how do you know a test failure is a real regression vs. natural variation?
+
+A few approaches that help:
+
+**Run N times, require M passes.** Don't assert that a single run passes. Run the eval 5 times and require 4/5 to pass your rubric. Genuine regressions will fail consistently; random variation will pass most of the time.
+
+**Track score distributions, not just pass/fail.** A healthy `CLAUDE.md` should produce outputs that score above your threshold most of the time. If your change shifts the distribution down — even if individual runs still technically pass — that's a signal worth investigating.
+
+**Pairwise comparison is underrated.** For catching regressions specifically, running the same inputs against the old and new `CLAUDE.md` and asking a judge to compare them directly (rather than score each independently) is more sensitive. The judge doesn't need to know what "good" looks like in the abstract — just which output is better.
+
+**Update the model separately from the configuration.** Many silent prompt regressions come not from changes you made but from Anthropic updating the underlying model. Running your eval suite on a schedule (not just on PRs) catches these.
+
+## The Honest Gap
+
+I'll be honest about where this is still hard: the tooling exists, but there's no widely-adopted, standardized workflow for `CLAUDE.md`-specific testing. The promptfoo + GitHub Actions path is the closest thing to a turnkey solution, but you still have to write the evals, which requires thinking carefully about what your `CLAUDE.md` is supposed to accomplish.
+
+That last part — articulating the intended behavior precisely enough to evaluate it — is actually the most valuable forcing function. The reason most `CLAUDE.md` files drift is that no one ever wrote down what they were supposed to do in testable terms. The discipline of writing evals forces you to do that.
+
+The file that tells your AI agent how to behave is, at minimum, as important as your `.eslintrc`. Probably more so. We should be treating it that way.
+
+---
+
+*If you've built something like this for your team, I'd love to hear about it.*
+
+## Further Reading
+
+A few pieces worth tracking down if you want to go deeper:
+
+**On the CLAUDE.md / AGENTS.md format itself**
+- [AGENTS.md spec](https://agents.md/) — the community-maintained open format for agent configuration files
+- [How to write a great agents.md: Lessons from over 2,500 repositories](https://github.blog/ai-and-ml/github-copilot/how-to-write-a-great-agents-md-lessons-from-over-2500-repositories/) — GitHub's empirical study on how these files evolve in the wild
+- [CLAUDE.md CI/CD pattern (ruvnet/ruflo wiki)](https://github.com/ruvnet/ruflo/wiki/CLAUDE-MD-CICD) — one of the few published examples of using CLAUDE.md as a contract enforced in CI
+
+**On prompt and agent regression testing**
+- [Automated Prompt Regression Testing with LLM-as-a-Judge and CI/CD](https://www.traceloop.com/blog/automated-prompt-regression-testing-with-llm-as-a-judge-and-ci-cd) — Traceloop's end-to-end tutorial; one of the more thorough walkthroughs available
+- [CI/CD for Evals: Running Prompt & Agent Regression Tests in GitHub Actions](https://www.kinde.com/learn/ai-for-software-engineering/ai-devops/ci-cd-for-evals-running-prompt-and-agent-regression-tests-in-github-actions/) — practical reference implementation from Kinde
+- [End Vibe-Driven Development: Testing AI Agents in CI with Promptfoo + Golden Traces](https://medium.com/@meryemmsakinn/end-vibe-driven-development-testing-ai-agents-in-ci-pipelines-promptfoo-golden-traces-b9b222b23d72) — covers the golden traces approach for agentic systems specifically
+- [Prompt Regression Testing: Preventing Quality Decay](https://www.statsig.com/perspectives/slug-prompt-regression-testing) — Statsig on the silent regression problem caused by model API updates
+- [A Pragmatic Guide to LLM Evals](https://newsletter.pragmaticengineer.com/p/evals) — Gergely Orosz's overview for practitioners
+
+**Tooling**
+- [Promptfoo](https://github.com/promptfoo/promptfoo) — open-source eval framework with a [GitHub Action](https://github.com/marketplace/actions/test-llm-outputs) and [Claude Agent SDK provider](https://www.promptfoo.dev/docs/providers/claude-agent-sdk/)
+- [Agent CI](https://agent-ci.com) — purpose-built CI for agentic applications; closest to a drop-in solution for what this post describes
+- [DeepEval](https://deepeval.com) — pytest-native LLM testing with built-in metrics
+
+**Research**
+- [When AIs Judge AIs: The Rise of Agent-as-a-Judge Evaluation for LLMs](https://arxiv.org/html/2508.02994v1) — covers multi-agent judging ensembles as a more robust alternative to single-model LLM-as-judge

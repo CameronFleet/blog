@@ -4,25 +4,23 @@ import Layout from '@/components/blog/Layout'
 import { MDXRemote } from 'next-mdx-remote/rsc'
 import { highlight } from 'sugar-high'
 import { JSX } from 'react'
+import Link from 'next/link'
 
 interface PageProps {
   params: Promise<{ slug: string }>
 }
 
-// Custom components for MDX
 const components = {
-  pre: ({ children, ...props }: JSX.IntrinsicElements['pre']) => {
-    return (
-      <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm" {...props}>
-        {children}
-      </pre>
-    )
-  },
+  pre: ({ children, ...props }: JSX.IntrinsicElements['pre']) => (
+    <pre className="bg-neutral-950 text-neutral-100 p-5 overflow-x-auto text-sm mb-6" {...props}>
+      {children}
+    </pre>
+  ),
   code: ({ children, ...props }: JSX.IntrinsicElements['code']) => {
     if (typeof children === 'string') {
       return (
-        <code 
-          className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-sm font-mono"
+        <code
+          className="bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 px-1.5 py-0.5 text-sm font-mono"
           dangerouslySetInnerHTML={{ __html: highlight(children) }}
           {...props}
         />
@@ -31,42 +29,42 @@ const components = {
     return <code {...props}>{children}</code>
   },
   h1: ({ children, ...props }: JSX.IntrinsicElements['h1']) => (
-    <h1 className="text-3xl font-bold text-gray-900 mb-6 mt-8" {...props}>
+    <h1 className="font-heading font-bold text-3xl text-neutral-950 dark:text-neutral-50 mb-6 mt-10" {...props}>
       {children}
     </h1>
   ),
   h2: ({ children, ...props }: JSX.IntrinsicElements['h2']) => (
-    <h2 className="text-2xl font-bold text-gray-900 mb-4 mt-6" {...props}>
+    <h2 className="font-heading font-bold text-2xl text-neutral-950 dark:text-neutral-50 mb-4 mt-8" {...props}>
       {children}
     </h2>
   ),
   h3: ({ children, ...props }: JSX.IntrinsicElements['h3']) => (
-    <h3 className="text-xl font-bold text-gray-900 mb-4 mt-6" {...props}>
+    <h3 className="font-heading font-bold text-xl text-neutral-950 dark:text-neutral-50 mb-3 mt-6" {...props}>
       {children}
     </h3>
   ),
   p: ({ children, ...props }: JSX.IntrinsicElements['p']) => (
-    <p className="text-gray-700 leading-relaxed mb-4" {...props}>
+    <p className="text-neutral-700 dark:text-neutral-300 leading-relaxed mb-5" {...props}>
       {children}
     </p>
   ),
   ul: ({ children, ...props }: JSX.IntrinsicElements['ul']) => (
-    <ul className="list-disc list-inside mb-4 space-y-2 text-gray-700" {...props}>
+    <ul className="list-disc pl-5 mb-5 space-y-2 text-neutral-700 dark:text-neutral-300" {...props}>
       {children}
     </ul>
   ),
   ol: ({ children, ...props }: JSX.IntrinsicElements['ol']) => (
-    <ol className="list-decimal list-inside mb-4 space-y-2 text-gray-700" {...props}>
+    <ol className="list-decimal pl-5 mb-5 space-y-2 text-neutral-700 dark:text-neutral-300" {...props}>
       {children}
     </ol>
   ),
   blockquote: ({ children, ...props }: JSX.IntrinsicElements['blockquote']) => (
-    <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 mb-4" {...props}>
+    <blockquote className="border-l-4 border-teal-600 dark:border-teal-400 pl-5 italic text-neutral-500 dark:text-neutral-400 mb-5" {...props}>
       {children}
     </blockquote>
   ),
   a: ({ children, ...props }: JSX.IntrinsicElements['a']) => (
-    <a className="text-blue-600 hover:text-blue-800 underline" {...props}>
+    <a className="text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 underline underline-offset-2" {...props}>
       {children}
     </a>
   ),
@@ -74,23 +72,17 @@ const components = {
 
 export async function generateStaticParams() {
   const posts = getAllPosts()
-  return posts.map((post) => ({
-    slug: post.slug,
-  }))
+  return posts.map((post) => ({ slug: post.slug }))
 }
 
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params
   const post = getPostBySlug(slug)
 
-  if (!post) {
-    return {
-      title: 'Post Not Found',
-    }
-  }
+  if (!post) return { title: 'Not Found' }
 
   return {
-    title: `${post.title} | Cameron Fleet`,
+    title: `${post.title} — Cameron Fleet`,
     description: post.excerpt,
   }
 }
@@ -99,48 +91,55 @@ export default async function Post({ params }: PageProps) {
   const { slug } = await params
   const post = getPostBySlug(slug)
 
-  if (!post) {
-    notFound()
-  }
+  if (!post) notFound()
+
+  const date = new Date(post.date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
 
   return (
     <Layout>
-      <article className="max-w-4xl mx-auto px-4 py-12">
-        <header className="mb-12">
-          <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-            <time dateTime={post.date}>
-              {new Date(post.date).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
-            </time>
-            <span>•</span>
+      <article className="max-w-3xl mx-auto px-6 py-16">
+        <div className="mb-2">
+          <Link
+            href="/"
+            className="text-xs font-heading font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-600 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
+          >
+            ← Writing
+          </Link>
+        </div>
+
+        <header className="mt-8 mb-12 pb-8 border-b border-neutral-200 dark:border-neutral-800">
+          <div className="flex items-center gap-4 text-xs font-heading uppercase tracking-wider text-neutral-400 dark:text-neutral-600 mb-5">
+            <time dateTime={post.date}>{date}</time>
+            <span>·</span>
             <span>{post.readingTime}</span>
             {post.category && (
               <>
-                <span>•</span>
-                <span className="text-blue-600 capitalize">{post.category}</span>
+                <span>·</span>
+                <span className="text-teal-600 dark:text-teal-400">{post.category}</span>
               </>
             )}
           </div>
-          
-          <h1 className="text-4xl font-bold text-gray-900 mb-6">
+
+          <h1 className="font-heading font-bold text-4xl text-neutral-950 dark:text-neutral-50 leading-tight mb-5">
             {post.title}
           </h1>
-          
+
           {post.excerpt && (
-            <p className="text-xl text-gray-600 leading-relaxed mb-6">
+            <p className="text-lg text-neutral-500 dark:text-neutral-400 leading-relaxed">
               {post.excerpt}
             </p>
           )}
-          
+
           {post.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mt-6">
               {post.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="px-3 py-1 text-sm font-medium bg-gray-100 text-gray-700 rounded-full"
+                  className="px-2 py-0.5 text-xs font-heading font-medium uppercase tracking-wider bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
                 >
                   {tag}
                 </span>
@@ -148,11 +147,11 @@ export default async function Post({ params }: PageProps) {
             </div>
           )}
         </header>
-        
-        <div className="prose prose-lg max-w-none">
+
+        <div className="prose max-w-none">
           <MDXRemote source={post.content} components={components} />
         </div>
       </article>
     </Layout>
   )
-} 
+}
