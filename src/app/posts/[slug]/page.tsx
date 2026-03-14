@@ -101,7 +101,7 @@ export default async function Post({ params }: PageProps) {
 
   return (
     <Layout>
-      <article className="max-w-3xl mx-auto px-6 py-16">
+      <article className="max-w-3xl mx-auto px-6 py-10 sm:py-16">
         <div className="mb-2">
           <Link
             href="/"
@@ -112,7 +112,7 @@ export default async function Post({ params }: PageProps) {
         </div>
 
         <header className="mt-8 mb-12 pb-8 border-b border-neutral-200 dark:border-neutral-800">
-          <div className="flex items-center gap-4 text-xs font-heading uppercase tracking-wider text-neutral-400 dark:text-neutral-600 mb-5">
+          <div className="flex flex-wrap items-center gap-3 text-xs font-heading uppercase tracking-wider text-neutral-400 dark:text-neutral-600 mb-5">
             <time dateTime={post.date}>{date}</time>
             <span>·</span>
             <span>{post.readingTime}</span>
@@ -124,7 +124,7 @@ export default async function Post({ params }: PageProps) {
             )}
           </div>
 
-          <h1 className="font-heading font-bold text-4xl text-neutral-950 dark:text-neutral-50 leading-tight mb-5">
+          <h1 className="font-heading font-bold text-3xl sm:text-4xl text-neutral-950 dark:text-neutral-50 leading-tight mb-5">
             {post.title}
           </h1>
 

@@ -16,7 +16,7 @@ export default function PostList({ posts, tags }: PostListProps) {
 
   return (
     <div>
-      <div className="flex items-baseline justify-between mb-6 pb-3 border-b border-neutral-200 dark:border-neutral-800">
+      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 mb-6 pb-3 border-b border-neutral-200 dark:border-neutral-800">
         <h2 className="font-heading font-bold text-xs uppercase tracking-widest text-neutral-400 dark:text-neutral-600">
           Writing
         </h2>

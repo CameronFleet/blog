@@ -1,7 +1,7 @@
 export default function Footer() {
   return (
     <footer className="border-t border-neutral-200 dark:border-neutral-800 mt-auto">
-      <div className="max-w-3xl mx-auto px-6 py-8 flex justify-between items-center">
+      <div className="max-w-3xl mx-auto px-6 py-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <span className="text-xs text-neutral-400 dark:text-neutral-600 font-heading uppercase tracking-wider">
           © {new Date().getFullYear()} Cameron Fleet
         </span>

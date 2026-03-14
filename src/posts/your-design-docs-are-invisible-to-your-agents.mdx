@@ -1,0 +1,159 @@
+---
+title: "Your Design Docs Are Invisible to Your Agents"
+date: "2026-03-14"
+excerpt: "We spent years debating where to put design docs. Google Docs won. Now AI agents can't find any of them. Here's why docs-in-repo is having its moment, and what's still missing."
+tags:
+  - AI
+  - Developer Experience
+  - Architecture
+  - Documentation
+category: blog
+---
+
+Google Docs won the docs war. Now your AI agents can't find any of your design decisions. That's a problem we created for ourselves.
+
+I'm talking about everything an engineering team writes collaboratively: design docs, architectural decision records, engineering standards, RFC proposals, onboarding guides, team conventions, runbooks. The full body of written knowledge that explains *why* the codebase is the way it is.
+
+Google Docs won because the collaboration UX is genuinely good. Real-time editing, inline comments, suggestion mode, a URL you can paste into Slack. Non-engineers can participate without installing anything. The friction of a PR-based review process for a document that's changing every few minutes is too high, and we all know it.
+
+But the AI era is quietly changing the calculus. And I think docs-in-repo is about to have its moment — if someone builds the right tool.
+
+## The discovery problem
+
+When I ask Claude to help implement something, it reads every file in my repository. It inherits context from `CLAUDE.md`, from test files, from existing implementations. It builds a mental model of the codebase from what it can see.
+
+What it cannot see is the Google Doc where we spent three hours deciding *why* the codebase looks the way it does.
+
+That architectural context — the constraints we considered, the options we rejected, the non-obvious tradeoffs — is invisible. The agent is flying blind on the decisions that matter most. It might suggest an approach we already evaluated and discarded. It might not understand why a particular abstraction exists. It has the implementation but not the reasoning.
+
+This isn't just a Claude problem. It's true of any AI agent that treats the git repository as its primary context. The code is there. The design is in Drive.
+
+## Can't we just point agents at Google Docs?
+
+The obvious response: give the agent access to Google Docs via MCP. And technically, you can do this today. There's a mature third-party MCP server ([google_workspace_mcp](https://github.com/taylorwilsdon/google_workspace_mcp)) with full CRUD on Docs and Drive. Atlassian just shipped an [official remote MCP server](https://www.atlassian.com/platform/remote-mcp-server) for Confluence. Google itself released a Workspace CLI in early March 2026 with an MCP interface.
+
+So agents *can* discover your Google Docs. But that framing misses the deeper problem.
+
+The question isn't whether an agent can *read* a design doc. It's whether an agent can *participate* in the design process as a first-class contributor. In a world where a significant amount of engineering work is done by agents, the design review isn't just humans commenting on a document — it's your agent commenting on your colleague's agent's proposal. It's an agent flagging an inconsistency between a proposed design and an existing architectural decision.
+
+Google Docs has no CLI. The bolt-on MCP servers that exist today can read and write content — but they can't replicate the rich interaction model that makes design reviews valuable. You can't ask an agent to leave a threaded inline comment anchored to a specific sentence, resolve a suggestion, or participate in a tracked-changes workflow.
+
+Beyond that: discovery is still fundamentally bolt-on. When a design doc lives in the repo, an agent exploring the codebase encounters it naturally — adjacent to the code it describes, visible in the same directory listing. When it lives in Drive, the agent needs to know to look, know where to look, and have the right OAuth connection configured. That's a lot of assumptions to maintain across a team.
+
+Inherent discovery beats bolt-on discovery. Every time.
+
+## The case for docs in the repo
+
+The arguments for storing design docs in git have only gotten stronger.
+
+**Agents inherit them for free.** Any AI assistant with read access to the repository gets the docs without additional configuration. The context is always present, always current, always co-located with the code it describes.
+
+**A design doc can become an implementation plan.** Once a design is written and committed, you can ask Claude to generate a structured implementation plan from it — also committed, also in markdown. That plan becomes a shared artifact that multiple agents can reference simultaneously. If it lives in a Google Doc, only one developer's agent can hold it. If it's in the repo, every agent on the team can coordinate against it.
+
+**Version history is meaningful.** When a design doc is committed alongside code changes, `git log` tells you exactly when the thinking changed and why. A Google Doc's revision history exists — nobody looks at it.
+
+**Forcing function for clarity.** This is the underrated one. Writing a design doc knowing it'll be reviewed in a PR enforces a discipline that "add a comment in the Doc" doesn't. You can't sneak in a major assumption change as a parenthetical edit.
+
+The ADR ecosystem has real tooling. [MADR](https://github.com/adr/madr) provides a well-structured template. [Log4brains](https://github.com/thomvaill/log4brains) generates a searchable portal from your ADR directory. [ADR Sync](https://github.com/yujiosaka/adr-sync) mirrors each ADR to a GitHub Discussion, giving non-engineers a place to comment without touching git.
+
+## The collaboration problem has a new dimension
+
+Here's where I want to be honest: the collaboration experience for docs-in-repo is still not good enough. And AI makes it worse before it makes it better.
+
+Writing a design doc in a PR is painful during the active writing phase. You're making rapid changes, thinking out loud, wanting a colleague to riff in real time. A PR review is not that. The commenting model — tied to specific line numbers, resolved in threads, scattered across a diff of raw markdown — is a poor substitute for inline suggestions in a shared document.
+
+The Docs as Code movement has known this for years. The most consistently cited pain point: product managers, legal reviewers, domain experts can't participate comfortably in a git-based workflow.
+
+But the new dimension is this: **agents have the same problem humans do, and for the same reasons.** If I want my agent to review a colleague's design doc and leave structured feedback, I need the tooling to support that programmatically. The agent needs to read the rendered document (not raw markdown), anchor a comment to a specific paragraph, and have that comment appear alongside the human comments in a way that's threaded and navigable. GitHub PR review threads don't come close.
+
+So we're stuck: Google Docs has the right UX for human collaboration but is opaque to agents. Git has the right properties for agentic systems but has a review UX designed for code diffs, not prose. Neither is what we need.
+
+## The tool that should exist
+
+Here's what I want. It needs to be AI-native, not a human tool with an agent API bolted on later.
+
+The core of it: a collaborative markdown editor that uses git as its persistence layer, with a CLI and MCP surface as first-class interfaces — not afterthoughts.
+
+Not git as a backup. Not a "sync to GitHub" button you press when you're done. Git as the *actual database*. Every few seconds, changes auto-save to a feature branch. The session opens a PR automatically when it starts. Humans and agents are both editing a git branch, not a document in a silo.
+
+```
+┌───────────────────────────────────────────────────────────┐
+│  Rendered markdown (not raw text)                         │
+│  Live cursors · inline comments · suggestion mode         │
+│  Humans and agents participate identically                │
+└──────────────────────────┬────────────────────────────────┘
+                           │ auto-commit every ~5s
+                           ▼
+                  feature/design-auth-v2 branch
+                           │
+                           ▼
+                      Pull Request
+                    (open from session start)
+                           │
+                      review & merge
+                           │
+                           ▼
+                docs/design/auth-v2.md in main
+         ┌─────────────────┴──────────────────┐
+         ▼                                    ▼
+   agents read it                    CLI / MCP exposes it
+   on next repo access               to any agent, anywhere
+```
+
+Three things that make this AI-native rather than just "Google Docs in git":
+
+**First: CLI and MCP from day one.** An agent needs to be able to open a session, read a document, post a comment, resolve a suggestion, and list all open docs — from a terminal or MCP tool call. Not through a web scraper or a fragile API designed for a frontend. The CLI and MCP aren't integrations added later; they're the primary interface. The human web UI is a *rendering* of the same operations.
+
+**Second: comments on rendered markdown, not raw diffs.** The review experience should look like Google Docs — inline comments anchored to paragraphs in the rendered document, threaded discussions, suggestion mode. Not GitHub PR threads scattered across a raw markdown diff. When my agent reviews your agent's design proposal, it leaves a comment on a specific sentence the same way you would.
+
+**Third: the directory is the knowledge base.** When you surface only the `docs/` directory — rendered, browsable, searchable — the repository becomes a navigable design archive. Not a pile of markdown files you have to `cat` through. A structured knowledge base where every agent working in the codebase has it in context.
+
+The closest existing tools: [HackMD](https://hackmd.io) has real-time multiplayer editing with manual GitHub sync, but push is a button you press. [Obsidian](https://obsidian.md) with the [git plugin](https://github.com/Vinzent03/obsidian-git) handles timed auto-commit but is fundamentally a single-user desktop app. Neither was designed with agents in mind.
+
+The full combination — multiplayer editing on rendered markdown, continuous git commits, PR-native review, CLI and MCP as first-class interfaces — doesn't exist. It's a genuine gap, and it's the gap that matters now.
+
+## What this unlocks
+
+This isn't just about design docs. It's any markdown that benefits from collaborative writing and rich viewing: ADRs, engineering standards, onboarding guides, runbooks, RFC responses, implementation plans, post-mortems. Anything that currently lives in Google Docs because the git experience is too hostile.
+
+If that tool existed, here's the workflow it enables:
+
+1. Open a collaborative session for `auth-redesign`. A branch and PR are created automatically.
+2. Engineers, product managers, and agents write the document together in rendered markdown — live cursors, inline comments on specific paragraphs. The Google Docs feel, but the CLI is right there.
+3. Every few seconds, the current state commits to the branch. The document is in git before anyone has "finished" writing.
+4. When the draft is stable, the PR is there. Review it — but the experience looks like commenting on a rendered document, not reviewing a markdown diff.
+5. An agent asked to implement the auth redesign reads the design doc alongside the codebase. It has the reasoning, the rejected alternatives, the constraints. Not just the code.
+6. Ask that agent to generate a structured implementation plan from the design. That plan — also markdown, also committed — goes through the same review workflow and the same merge. Now it's in the repo too.
+7. Multiple agents on the team work from that implementation plan simultaneously. Each one knows what the others are doing because the plan is a shared artifact, not a file on one person's laptop.
+
+Step 7 is the one that changes how engineering teams actually operate. Coordinating agents against a shared plan is hard when the plan is ephemeral. When it's in the repo, it's as real and as versioned as a pull request.
+
+## The honest state of things
+
+We're not there yet. The pragmatic path today is probably hybrid: write initial drafts and active design discussions in Google Docs, then commit a finalized markdown version to the repo before implementation begins. That finalized version is what the agents reference. Not seamless, but it preserves both good collaborative writing UX and agentic discoverability.
+
+For teams willing to accept some friction, the full docs-in-repo approach with MADR and Log4brains and ADR Sync is genuinely viable — especially for ADRs, which are less iterative than active design docs.
+
+But the right long-term answer is the tool I described. Git as the database. Collaborative editing on rendered markdown as the UX. CLI and MCP as first-class interfaces. The PR as the review and merge mechanism.
+
+It's not a fundamentally hard product to build. It's a product that requires someone to decide the problem is worth solving. Every document type that currently lives in Google Docs because git is too hostile belongs in that tool. The codebase and the knowledge base should be the same repository. In a world where agents are doing a significant share of the work, keeping them separate is an increasingly expensive mistake — and one we can stop making.
+
+## Further reading
+
+**ADR tooling**
+- [MADR — Markdown Architectural Decision Records](https://github.com/adr/madr)
+- [Log4brains — ADR management and knowledge base generator](https://github.com/thomvaill/log4brains)
+- [ADR Sync — Mirror ADRs to GitHub Discussions](https://github.com/yujiosaka/adr-sync)
+- [ADR Tooling Ecosystem](https://adr.github.io/adr-tooling/)
+
+**Docs as Code**
+- [Docs as Code — Write the Docs guide](https://www.writethedocs.org/guide/docs-as-code/)
+- [Docs as Code: A Good Idea in the Wrong Hands](https://doclandscape.com/docs-as-code-a-good-idea-in-the-wrong-hands/) — honest assessment of where the practice fails
+
+**Collaborative editing with git**
+- [HackMD — Sync Notes to GitHub](https://homepage.hackmd.io/blog/2023/12/20/sync-notes-to-github)
+- [Obsidian Git plugin](https://github.com/Vinzent03/obsidian-git) — timed auto-commit for Obsidian vaults
+
+**Agent access to existing doc stores**
+- [google_workspace_mcp](https://github.com/taylorwilsdon/google_workspace_mcp) — full CRUD on Google Docs and Drive via MCP
+- [Atlassian Remote MCP Server](https://www.atlassian.com/platform/remote-mcp-server) — official Confluence and Jira MCP, currently in beta

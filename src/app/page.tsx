@@ -8,7 +8,7 @@ export default function Home() {
 
   return (
     <Layout>
-      <div className="max-w-3xl mx-auto px-6 py-16">
+      <div className="max-w-3xl mx-auto px-6 py-10 sm:py-16">
         <div className="mb-16">
           <p className="text-neutral-500 dark:text-neutral-400 text-sm">
             Staff engineer at{' '}
